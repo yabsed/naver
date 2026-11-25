@@ -1,0 +1,137 @@
+% Typography follows 14-bmw/templates/cv-template.tex: Termes text, Heros labels,
+% letterspaced section heads over a hairline, name and page count in the footer.
+\documentclass[11pt,a4paper]{article}
+\usepackage[left=23mm,right=23mm,top=17mm,bottom=19mm,footskip=10mm]{geometry}
+\usepackage{fontspec}
+\setmainfont{TeX Gyre Termes}[Ligatures=TeX]
+\setsansfont{TeX Gyre Heros}[Scale=0.91]
+\setmonofont{D2Coding}[Scale=0.88]
+\usepackage{kotex}
+\setmainhangulfont{NanumMyeongjo}[Scale=0.95, AutoFakeSlant=0.16]
+\setsanshangulfont{NanumGothic}[Scale=0.86]
+\setmonohangulfont{D2Coding}[Scale=0.88]
+% ko.TeX sets quotes, parentheses and ellipses in the Hangul face by default. English paragraphs
+% take them from the Latin face instead; the Lua filter marks Korean paragraphs with \koreantext.
+\makeatletter
+\XeTeXcharclass"2018=\XeTeXcharclassAO \XeTeXcharclass"201C=\XeTeXcharclassAO
+\XeTeXcharclass"2019=\XeTeXcharclassAC \XeTeXcharclass"201D=\XeTeXcharclassAC
+\protected\def\latintext{\latinparens\let\XeKo@fontLD\XeKo@font@Latin}
+\protected\def\koreantext{\hangulparens\let\XeKo@fontLD\XeKo@font@Hangul}
+\makeatother
+\latintext
+\newfontfamily\symbolfont{Symbola}[Scale=0.88]
+\newcommand{\symfont}{\symbolfont\XeTeXinterchartokenstate=0\relax}  % bypass ko.TeX font switching
+\usepackage[protrusion=true,expansion=false]{microtype}
+\usepackage{xcolor,enumitem,needspace,fancyhdr,lastpage,graphicx,wrapfig,multicol}
+\definecolor{ink}{HTML}{202020}
+\definecolor{muted}{HTML}{555555}
+\definecolor{rulegray}{HTML}{B8B8B8}
+\definecolor{panelbg}{HTML}{F6F6F4}
+\usepackage[unicode,hidelinks]{hyperref}
+\hypersetup{pdftitle={$title$},pdfauthor={$author$},pdfsubject={Selected Writing},pdfdisplaydoctitle=true}
+\urlstyle{same}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancyfoot[L]{{\sffamily\fontsize{8.5}{10}\selectfont\color{muted}$author$}}
+\fancyfoot[R]{{\sffamily\fontsize{8.5}{10}\selectfont\color{muted}\thepage\,/\,\pageref*{LastPage}}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlength{\columnsep}{6mm}   % gap between a lead image and the text beside it
+\setlength{\intextsep}{0pt}
+\setlength{\multicolsep}{2pt}
+\raggedcolumns
+\setlist[itemize]{leftmargin=11pt,labelsep=6pt,itemsep=2pt,topsep=4pt,parsep=0pt,partopsep=0pt,label=\raisebox{0.3pt}{\tiny\textbullet}}
+\setlist[enumerate]{leftmargin=15pt,labelsep=5pt,itemsep=2pt,topsep=4pt,parsep=0pt,partopsep=0pt}
+\providecommand{\tightlist}{\setlength{\parskip}{0pt}}
+\setlength{\emergencystretch}{2.5em}
+\widowpenalty=10000
+\clubpenalty=10000
+\raggedbottom
+
+% --- masthead and section heads (same as the CV) -----------------------------
+\newcommand{\cvname}[1]{{\fontsize{29}{32}\selectfont #1\par}\vspace{1pt}}
+\newcommand{\cvcontact}[1]{{\sffamily\fontsize{9.4}{12}\selectfont\color{muted}#1\par}}
+\newcommand{\cvsection}[1]{%
+  \par\addvspace{16pt}\Needspace{9\baselineskip}%
+  {\sffamily\fontsize{10.2}{12}\selectfont\addfontfeatures{LetterSpace=10}\MakeUppercase{#1}\par}%
+  \nobreak\vspace{4pt}{\color{rulegray}\hrule height 0.3pt}\nobreak\vspace{3pt}}
+\newcommand{\cvdate}[1]{{\sffamily\fontsize{9.4}{11.5}\selectfont\color{muted}#1}}
+
+% --- one entry: title left, date right, like a CV project row ----------------
+\newcommand{\entrystart}[1]{\par\addvspace{19pt}\Needspace{#1}}
+% A long title breaks into lines of similar length instead of leaving one word on the last line.
+\newcommand{\balancedlines}{\rightskip=0pt plus \hsize\relax\parfillskip=0pt\relax
+  \spaceskip=\fontdimen2\font\relax\xspaceskip=\spaceskip\hyphenpenalty=10000 \exhyphenpenalty=10000 }
+\newcommand{\entryrow}[3]{%
+  \noindent\parbox[t]{\dimexpr\linewidth-34mm\relax}{#1\balancedlines #2\strut}\hfill
+  \parbox[t]{32mm}{\raggedleft\leavevmode\cvdate{#3}\strut}\par\nobreak}
+\newcommand{\headlinehead}[2]{\entryrow{\fontsize{16}{19}\selectfont\bfseries}{#1}{#2}\vspace{1pt}}
+\newcommand{\notehead}[2]{\entryrow{\fontsize{12.3}{15}\selectfont\bfseries}{#1}{#2}}
+\newcommand{\datehead}[1]{\noindent\hfill\cvdate{#1}\par\nobreak\vspace{-3pt}}
+\newcommand{\entrydeck}[1]{{\fontsize{10.8}{14.4}\selectfont\itshape\hyphenpenalty=10000 #1\par}\nobreak\vspace{2pt}}
+
+% --- pieces inside a collected entry ------------------------------------------
+% Room for a few lines before a label or rule. Needspace misjudges the page inside multicols
+% (it would force an early break there), so it is skipped in the two-column outline.
+\makeatletter
+\newcommand{\keeplines}[1]{\ifnum\col@number>\@ne\else\Needspace{#1}\fi}
+\makeatother
+\newcommand{\piecemeta}[1]{{\sffamily\fontsize{8.6}{11}\selectfont\color{muted}#1}}
+\newcommand{\piecedate}[1]{\par\addvspace{11pt}\keeplines{3\baselineskip}\noindent\hfill\piecemeta{#1}\par\nobreak\vspace{-3pt}}
+\newcommand{\firstpiecedate}[1]{\par\nobreak\vspace{-1pt}\noindent\hfill\piecemeta{#1}\par\nobreak\vspace{-3pt}}
+\newcommand{\piecehead}[2]{\par\addvspace{11pt}\keeplines{3\baselineskip}%
+  \noindent{\sffamily\fontsize{9.2}{11.5}\selectfont\bfseries #1}\hfill\piecemeta{#2}\par\nobreak\vspace{-2pt}}
+% The short rule is set as leaders, i.e. as glue: it cannot end a page or column, and when a break
+% falls just before it TeX discards it, so the next page or column starts with text, not a rule.
+\newcommand{\piecebreak}{\par\addvspace{9pt}%
+  \cleaders\hbox to 14mm{{\color{rulegray}\vrule height 0.3pt width 14mm}}\vskip 0.4pt  % inner braces keep
+  % the colour reset inside the box; leaders must be followed directly by their glue
+  \nobreak\vskip 9pt}
+% A link preview from Keep: a caption that never leaves the end of its note.
+\newcommand{\linkline}[1]{\par\nobreak\vspace{4pt}\noindent
+  {\sffamily\fontsize{8.6}{11.5}\selectfont\color{muted}\raggedright
+   {\addfontfeatures{LetterSpace=8}LINK}\hspace{7pt}#1\par}}
+\newcommand{\innerheadA}[1]{\par\addvspace{12pt}\keeplines{4\baselineskip}{\fontsize{12}{15}\selectfont\bfseries #1\par}\nobreak}
+\newcommand{\innerheadB}[1]{\par\addvspace{11pt}\keeplines{4\baselineskip}{\bfseries #1\par}\nobreak}
+
+% --- quotations and fixed-width panels ----------------------------------------
+\newenvironment{notequote}{%
+  \begin{list}{}{\leftmargin=11pt\rightmargin=0pt\topsep=1pt\partopsep=0pt\parsep=4pt\itemsep=0pt}%
+  \item\relax\itshape\color{muted}}{\end{list}}
+\newsavebox{\panelbox}
+\newenvironment{panel}{%
+  \par\addvspace{7pt}\noindent\begin{lrbox}{\panelbox}\begin{minipage}{88mm}%
+  \raggedright\ttfamily\fontsize{8.8}{12.6}\selectfont}%
+ {\end{minipage}\end{lrbox}%
+  {\setlength{\fboxsep}{7pt}\setlength{\fboxrule}{0.3pt}\fcolorbox{rulegray}{panelbg}{\usebox{\panelbox}}}%
+  \par\addvspace{7pt}}
+
+% --- lead images: one right-hand column, hairline frame -----------------------
+\newcommand{\imgframe}[2]{{\setlength{\fboxsep}{0pt}\setlength{\fboxrule}{0.3pt}%
+  \fcolorbox{rulegray}{white}{\includegraphics[width=\dimexpr#2-0.6pt\relax]{#1}}}}
+\newcommand{\leadimage}[2]{%
+  \begin{wrapfigure}{r}{#2}\vspace{$imgshift$}\noindent\imgframe{#1}{#2}\end{wrapfigure}}
+\newcommand{\columnimage}[1]{\noindent\imgframe{#1}{\linewidth}\par\vspace{3pt}}
+\newenvironment{sideimage}[2]{%
+  \def\sideimgpath{#1}\def\sideimgwidth{#2}%
+  \par\noindent\begin{minipage}[t]{\dimexpr\linewidth-#2-\columnsep\relax}\setlength{\parskip}{5pt}}%
+ {\end{minipage}\hfill
+  \raisebox{-\dimexpr\height-\ht\strutbox\relax}{\imgframe{\sideimgpath}{\sideimgwidth}}\par}
+\makeatletter
+% Text shorter than its image: pad down to the image's lower edge before the next entry.
+\newcommand{\entryfinish}{\par
+  \ifnum\c@WF@wrappedlines>\@ne
+    \vskip\dimexpr\baselineskip*\numexpr\c@WF@wrappedlines-1\relax\relax
+  \fi
+  \WFclear}
+\makeatother
+
+\begin{document}
+\color{ink}
+\fontsize{10.5}{14.8}\selectfont
+\cvname{$author$}
+\cvcontact{$subtitle$}
+$body$
+\end{document}
