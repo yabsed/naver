@@ -65,6 +65,24 @@ local inner = {
   end,
 }
 
+-- Between \keepon and \keepoff a page may not break: paragraphs forbid it themselves, and the
+-- gaps between blocks are closed here.
+local function glue(blocks, keeping)
+  local out, first = pandoc.List(), false
+  for _, block in ipairs(blocks) do
+    local text = block.t == 'RawBlock' and block.text or ''
+    if text:find('\\keepoff', 1, true) or text:find('\\reserve', 1, true) then
+      keeping = false
+    elseif keeping and not first then
+      out:insert(raw('\\nobreak'))
+    end
+    first = false
+    out:insert(block)
+    if text:find('\\keepon', 1, true) then keeping, first = true, true end
+  end
+  return out
+end
+
 local function entry(div)
   local a = div.attributes
   local blocks = pandoc.List(div.content)
@@ -75,9 +93,11 @@ local function entry(div)
   if blocks[1] and blocks[1].t == 'Div' and blocks[1].classes:includes('deck') then
     deck = tex(blocks:remove(1).content[1].content)
   end
-  local body = pandoc.walk_block(pandoc.Div(blocks), inner).content
+  local keep = a.keep == '1' and a.mode ~= 'columns' and a.mode ~= 'side'
+  local body = glue(pandoc.walk_block(pandoc.Div(blocks), inner).content, keep)
 
   local out = pandoc.List({raw('\\entrystart{' .. a.need .. 'mm}')})
+  if keep then out:insert(raw('\\keepon')) end
   if title then
     local macro = a.kind == 'headline' and '\\headlinehead' or '\\notehead'
     out:insert(raw(macro .. '{' .. title .. '}{' .. a.date .. '}'))

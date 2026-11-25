@@ -362,7 +362,7 @@ def keep_marks(note, kind, image_size, place):
             if rest + block["lines"] < TAIL_LINES and position:
                 rest += block["lines"]
                 continue
-            wanted = TAIL_LINES - rest  # how many of this block's closing lines must come along
+            wanted = max(3, TAIL_LINES - rest)  # how many of this block's closing lines must come along
             if block["plain"] and block["lines"] > wanted + 1:
                 penalties = " ".join(["10000"] * (wanted - 1) + ["0"])
                 marks.setdefault(("open", block["start"]), []).append(
@@ -431,7 +431,12 @@ def entry_markdown(note, kind, root, workdir, images):
     if note["image"]:
         image_path, image_size = place(note["image"])
     plan = layout(note, kind, image_size)
+    keep_head, marks = False, {}
+    if plan.get("mode") not in ("columns", "side"):  # those two are laid out as fixed blocks already
+        keep_head, marks = keep_marks(note, kind, image_size, place)
     attributes = [f'kind="{kind}"', f'date="{note["date"]}"', f'need="{plan["need"]:.0f}"']
+    if keep_head:
+        attributes.append('keep="1"')
     if "mode" in plan:
         attributes.append(f'mode="{plan["mode"]}"')
     if image_path:
@@ -441,7 +446,7 @@ def entry_markdown(note, kind, root, workdir, images):
         out += [f'## {note["title"]}', ""]
     if note["deck"]:
         out += ["::: deck", note["deck"], ":::", ""]
-    out += body_markdown(note, place)
+    out += body_markdown(note, place, marks)
     out += ["", ":::::::", ""]
     return out
 

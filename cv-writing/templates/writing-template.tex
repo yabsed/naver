@@ -43,15 +43,31 @@
 \setlength{\columnsep}{6mm}   % gap between a lead image and the text beside it
 \setlength{\intextsep}{0pt}
 \setlength{\multicolsep}{2pt}
-\AddToHook{env/multicols/begin}{\setlength{\parskip}{5pt}}  % columns are cut to an exact height: no shrink there
+\AddToHook{env/multicols/begin}{\setlength{\parskip}{5pt}\topskip=1\topskip}  % columns are cut to an exact height: no give there
 \raggedcolumns
 \setlist[itemize]{leftmargin=11pt,labelsep=6pt,itemsep=2pt,topsep=4pt,parsep=0pt,partopsep=0pt,label=\raisebox{0.3pt}{\tiny\textbullet}}
 \setlist[enumerate]{leftmargin=15pt,labelsep=5pt,itemsep=2pt,topsep=4pt,parsep=0pt,partopsep=0pt}
 \providecommand{\tightlist}{\setlength{\parskip}{0pt}}
 \setlength{\emergencystretch}{2.5em}
-\widowpenalty=10000
-\clubpenalty=10000
 \raggedbottom
+% Page breaks are chosen, not just filled to the last line: with some stretch on the page TeX can
+% weigh a break, and it then ends a page between paragraphs (up to about six lines early) rather
+% than cut one. A paragraph that must be cut keeps three lines on either side.
+% \raggedbottom keeps the spacing itself rigid.
+\newcommand{\normalinterline}{300}
+\newcommand{\normalwidows}{\clubpenalties=3 10000 10000 0 \widowpenalties=3 10000 10000 0 }
+\interlinepenalty=\normalinterline
+\normalwidows
+\advance\topskip by 0pt plus 66pt
+% Between \keepon and \keepoff nothing may break (the Lua filter closes the gaps between blocks).
+\makeatletter
+\newif\ifkeeping
+\newcommand{\keepon}{\par\keepingtrue\interlinepenalty=\@M
+  \@beginparpenalty=\@M \@itempenalty=\@M \@endparpenalty=\@M}
+\newcommand{\keepoff}{\par\keepingfalse\interlinepenalty=\normalinterline\relax
+  \@beginparpenalty=-\@lowpenalty \@itempenalty=-\@lowpenalty \@endparpenalty=-\@lowpenalty
+  \normalwidows}
+\makeatother
 
 % --- masthead and section heads (same as the CV) -----------------------------
 \newcommand{\cvname}[1]{{\fontsize{29}{32}\selectfont #1\par}\vspace{1pt}}
@@ -79,7 +95,7 @@
 % Room for a few lines before a label or rule. Needspace misjudges the page inside multicols
 % (it would force an early break there), so it is skipped in the two-column outline.
 \makeatletter
-\newcommand{\keeplines}[1]{\ifnum\col@number>\@ne\else\Needspace{#1}\fi}
+\newcommand{\keeplines}[1]{\ifnum\col@number>\@ne\else\ifkeeping\else\Needspace{#1}\fi\fi}
 \makeatother
 \newcommand{\piecemeta}[1]{{\sffamily\fontsize{8.6}{11}\selectfont\color{muted}#1}}
 \newcommand{\piecedate}[1]{\par\addvspace{11pt}\keeplines{3\baselineskip}\noindent\hfill\piecemeta{#1}\par\nobreak\vspace{-3pt}}
@@ -128,7 +144,7 @@
   \ifnum\c@WF@wrappedlines>\@ne
     \vskip\dimexpr\baselineskip*\numexpr\c@WF@wrappedlines-1\relax\relax
   \fi
-  \WFclear}
+  \WFclear\keepoff}
 % Before a part that opens with its own image: end any earlier wrap, then keep rule, image and text together.
 \newcommand{\reserve}[1]{\entryfinish\keeplines{#1}}
 \makeatother
