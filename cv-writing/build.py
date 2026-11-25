@@ -7,7 +7,8 @@ Layout lives in templates/ and follows 14-bmw/templates/cv-template.tex.
 
 Requires Pandoc, XeLaTeX with ko.TeX and wrapfig, latexmk, Pillow, and the TeX Gyre
 Termes/Heros, NanumMyeongjo, NanumGothic, D2Coding and Symbola fonts.
-Pass --workdir DIR to keep the intermediate Markdown, LaTeX and log.
+Pass --headlines-only to build pdf/headlines.pdf with the headline pieces alone, and
+--workdir DIR to keep the intermediate Markdown, LaTeX and log.
 """
 
 from pathlib import Path
@@ -30,6 +31,7 @@ HEADLINES = [
     "2026-10-15.md",     # Seo Taiji Is South Korean Pop Culture's Most Dangerous Unknown in 2026
     "2026-10-12-01.md",  # A Question for DJT
     "2026-09-23.md",     # Who Chooses South Korea's Supreme Court?
+    "2026-08-07.md",     # Flowers are dumb and strong.
 ]
 # Typed outlines: set in two columns, and "1." lines stay plain text instead of becoming lists.
 OUTLINE_NOTES = {"2026-09-05.md"}
@@ -334,6 +336,7 @@ def entry_markdown(note, kind, root, workdir, images):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--workdir", type=Path, help="keep intermediate files in this directory")
+    parser.add_argument("--headlines-only", action="store_true", help="build pdf/headlines.pdf without the notebook")
     arguments = parser.parse_args()
 
     root = Path(__file__).resolve().parent
@@ -351,7 +354,10 @@ def main():
         workdir = arguments.workdir.resolve() if arguments.workdir else Path(temporary)
         workdir.mkdir(parents=True, exist_ok=True)
         lines, images = [], {}
-        for heading, kind, names in (("Headlines", "headline", HEADLINES), ("Notebook", "note", notebook)):
+        sections = [("Headlines", "headline", HEADLINES), ("Notebook", "note", notebook)]
+        if arguments.headlines_only:
+            sections = sections[:1]
+        for heading, kind, names in sections:
             lines += ["", f"# {heading}", ""]
             for name in names:
                 lines += entry_markdown(notes[name], kind, root, workdir, images)
@@ -385,8 +391,9 @@ def main():
 
         output_dir = root / "pdf"
         output_dir.mkdir(exist_ok=True)
-        shutil.copyfile(workdir / "writing.pdf", output_dir / "writing.pdf")
-    print(f"Created {output_dir / 'writing.pdf'} ({len(HEADLINES)} headlines, {len(notebook)} notebook entries)")
+        output = output_dir / ("headlines.pdf" if arguments.headlines_only else "writing.pdf")
+        shutil.copyfile(workdir / "writing.pdf", output)
+    print(f"Created {output} ({', '.join(f'{len(names)} {heading.lower()}' for heading, _, names in sections)})")
 
 
 if __name__ == "__main__":
