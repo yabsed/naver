@@ -1,0 +1,73 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[left=18mm,right=18mm,top=15mm,bottom=16mm,footskip=9mm]{geometry}
+\usepackage{fontspec}
+\setmainfont{TeX Gyre Termes}[Ligatures=TeX]
+\setsansfont{TeX Gyre Heros}[Scale=0.91]
+\usepackage[protrusion=true,expansion=false]{microtype}
+\usepackage{xcolor,enumitem,needspace,fancyhdr,lastpage}
+\definecolor{ink}{HTML}{202020}
+\definecolor{muted}{HTML}{555555}
+\definecolor{rulegray}{HTML}{B8B8B8}
+\usepackage[unicode,hidelinks]{hyperref}
+\hypersetup{pdftitle={$title$},pdfauthor={$author$},pdfsubject={Curriculum Vitae},pdfdisplaydoctitle=true}
+\urlstyle{same}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancyfoot[L]{{\sffamily\fontsize{8.5}{10}\selectfont\color{muted}$author$}}
+\fancyfoot[R]{{\sffamily\fontsize{8.5}{10}\selectfont\color{muted}\thepage\,/\,\pageref*{LastPage}}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+\setlist[itemize]{leftmargin=11pt,labelsep=6pt,itemsep=2pt,topsep=5pt,parsep=0pt,partopsep=0pt,label=\raisebox{0.3pt}{\tiny\textbullet}}
+\providecommand{\tightlist}{\setlength{\parskip}{0pt}}
+\setlength{\emergencystretch}{2em}
+\hyphenpenalty=7000
+\widowpenalty=10000
+\clubpenalty=10000
+\raggedbottom
+
+\newcommand{\cvname}[1]{%
+  {\fontsize{29}{32}\selectfont #1\par}\vspace{1pt}}
+\newcommand{\cvcontact}[1]{%
+  {\sffamily\fontsize{9.4}{12}\selectfont\color{muted}#1\par}}
+\newcommand{\cvsection}[1]{%
+  \par\addvspace{12pt}\Needspace{7\baselineskip}%
+  {\sffamily\fontsize{10.2}{12}\selectfont\addfontfeatures{LetterSpace=10}\MakeUppercase{#1}\par}%
+  \nobreak\vspace{4pt}{\color{rulegray}\hrule height 0.3pt}\nobreak\vspace{5pt}}
+\newcommand{\cvrow}[2]{%
+  \noindent\hbox to\linewidth{\strut#1\hfill#2}\par}
+\newcommand{\cvdate}[1]{{\sffamily\fontsize{9.4}{11.5}\selectfont\color{muted}#1}}
+\newcommand{\cvproject}[4]{%
+  \cvrow{{\fontsize{12.3}{14}\selectfont\bfseries #1}}{\cvdate{#3}}%
+  {\fontsize{10.6}{13}\selectfont #2\hfill
+    \mbox{\sffamily\fontsize{9.3}{11.5}\selectfont\color{muted}#4}\par}%
+  \vspace{3pt}}
+\newsavebox{\cvdetailsbox}
+\newcommand{\cvdetails}[2]{%
+  {\sffamily\fontsize{9.3}{11.5}\selectfont\color{muted}%
+    \if\relax\detokenize{#2}\relax #1\par
+    \else
+      \sbox{\cvdetailsbox}{#1\enspace\textperiodcentered\enspace#2}%
+      \ifdim\wd\cvdetailsbox>\linewidth #1\par#2\par
+      \else\usebox{\cvdetailsbox}\par\fi
+    \fi}}
+\newcommand{\cvlinks}[1]{%
+  {\sffamily\fontsize{9.3}{11.5}\selectfont\color{muted}#1\par}}
+\newcommand{\cvaward}[1]{%
+  \vspace{3pt}{\sffamily\fontsize{9.3}{11.5}\selectfont #1\par}}
+\newenvironment{cvskills}{%
+  \begingroup\sffamily\fontsize{9.6}{12.5}\selectfont
+  \begin{tabular}{@{}l@{\hspace{14pt}}l@{}}%
+}{\end{tabular}\par\endgroup}
+\newenvironment{cventry}{%
+  \par\addvspace{14pt}\noindent\begin{minipage}{\linewidth}%
+  \setlength{\parskip}{0pt}\raggedright
+}{\end{minipage}\par}
+
+\begin{document}
+\color{ink}
+\fontsize{10.5}{13.1}\selectfont
+\raggedright
+$body$
+\end{document}
