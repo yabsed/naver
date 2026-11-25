@@ -31,6 +31,8 @@ HEADLINES = [
     "2026-10-15.md",     # Seo Taiji Is South Korean Pop Culture's Most Dangerous Unknown in 2026
     "2026-10-12-01.md",  # A Question for DJT
     "2026-09-23.md",     # Who Chooses South Korea's Supreme Court?
+    "2026-08-15-1.md",   # (untitled) I never expected to find Jane Street on The Economist's list of fools.
+    "2026-08-25-1.md",   # The Jane Street Mystery: Why a Firm of Puzzle-Solvers Bet on AI Without a Safety Net
     "2026-08-07.md",     # Flowers are dumb and strong.
 ]
 # Typed outlines: set in two columns, and "1." lines stay plain text instead of becoming lists.
@@ -51,6 +53,11 @@ GAP_MM = 6.0
 IMAGE_MAX_W_MM = 58.0
 IMAGE_MAX_H_MM = 60.0
 IMAGE_SHIFT = "-4.4pt"  # lifts an image so its top meets the first line's cap height
+# Page breaks. A piece (a whole note, or one dated part of a collected note) up to this estimated
+# height is never split: it moves to the next page whole. A longer piece may run over, but it
+# always takes at least TAIL_LINES lines with it, so no page opens with a two- or three-line stub.
+KEEP_WHOLE_MM = 120.0
+TAIL_LINES = 6
 
 MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
 DATE = re.compile(r"^\*(≤ )?(\d{4})-(\d{2})-(\d{2})\*$")
@@ -121,7 +128,7 @@ def parse(path):
         elif DATE.match(stripped):
             tokens.append(("date", parse_date(DATE.match(stripped))))
         elif IMAGE.match(stripped):
-            image = image or IMAGE.match(stripped).group(1)
+            tokens.append(("image", IMAGE.match(stripped).group(1)))
         elif BREAK.match(stripped):
             tokens.append(("break",))
         elif LABEL.match(stripped):
@@ -159,6 +166,25 @@ def parse(path):
             if not (token[0] == "break" and next_content(index + 1) < len(tokens)
                     and tokens[next_content(index + 1)][0] in ("date", "piece"))
         ]
+    # A note's only image leads the entry. When a note has several, each opens the part it is
+    # written in, and the first part's image leads.
+    body_images = [token for token in tokens if token[0] == "image"]
+    if image is None and len(body_images) == 1:
+        image = body_images[0][1]
+        tokens = [token for token in tokens if token[0] != "image"]
+    elif body_images:
+        placed, part_start = [], 0
+        for token in tokens:
+            if token[0] == "image" and part_start == 0 and image is None:
+                image = token[1]
+            elif token[0] == "image":
+                placed.insert(part_start, token)
+                part_start += 1
+            else:
+                placed.append(token)
+                if token[0] in ("break", "date", "piece"):
+                    part_start = len(placed)
+        tokens = placed
     while tokens and tokens[0][0] in ("blank", "break"):
         tokens.pop(0)
     while tokens and tokens[-1][0] in ("blank", "break"):
@@ -196,7 +222,7 @@ def raw_latex(value):
     return ["", "```{=latex}", value, "```", ""]
 
 
-def body_markdown(note):
+def body_markdown(note, place, marks):
     outline = note["name"] in OUTLINE_NOTES
     levels = sorted({len(HEADING.match(token[1]).group(1)) for token in note["tokens"]
                      if token[0] == "text" and HEADING.match(token[1])})
@@ -206,8 +232,17 @@ def body_markdown(note):
         if in_links and token[0] != "blank" and not (token[0] == "text" and LIST_ITEM.match(token[1])):
             out += ["", ":::", ""]
             in_links = False
+        out += [line for mark in marks.get(("close", index), []) for line in raw_latex(mark)]
+        if token[0] in ("break", "date", "piece"):  # a part opening with its own image stays whole
+            following = next((later for later in tokens[index + 1:] if later[0] != "blank"), None)
+            if following and following[0] == "image":
+                out += raw_latex(f"\\reserve{{{place(following[1])[1][1] + 14:.0f}mm}}")
+        out += [line for mark in marks.get(("open", index), []) for line in raw_latex(mark)]
         if token[0] == "blank":
             out.append("")
+        elif token[0] == "image":
+            target, (width, _) = place(token[1])
+            out += raw_latex(f"\\leadimage{{{target}}}{{{width:.1f}mm}}")
         elif token[0] == "date":
             out += raw_latex(f"\\piecedate{{{show(token[1])}}}")
         elif token[0] == "piece":
@@ -260,14 +295,89 @@ def set_lines(text, size_pt, width_mm):
     return max(1, math.ceil(text_units(text) * size_pt * 0.3528 * 1.08 / width_mm))
 
 
-def layout(note, kind, image_size):
-    """Estimate heights to choose how the image sits and how much room the entry needs."""
+def head_height(note, kind):
     head_mm = 6.0
     if note["title"]:
         size_pt, line_mm = (16, 6.7) if kind == "headline" else (12.3, 5.3)
         head_mm = set_lines(note["title"], size_pt, TEXT_WIDTH_MM - 34) * line_mm + 3
     if note["deck"]:
         head_mm += set_lines(note["deck"], 10.8, TEXT_WIDTH_MM) * 5.1 + 3
+    return head_mm
+
+
+def keep_marks(note, kind, image_size, place):
+    """Decide where a note may not break across pages.
+
+    Returns (keep_head, marks): keep_head says the head and first piece stay together, and marks
+    maps ("close" | "open", token index) to the LaTeX commands emitted before that token.
+    """
+    tokens = note["tokens"]
+    per_line = TEXT_WIDTH_MM / EM_MM
+    pieces, piece, block = [], {"start": 0, "blocks": [], "image": image_size}, None
+    fenced = False
+    for index, token in enumerate(tokens):
+        if token[0] in ("break", "date", "piece"):
+            pieces.append(piece)
+            piece, block = {"start": index, "blocks": [], "image": None, "marker": True}, None
+        elif token[0] == "image":
+            piece["image"] = place(token[1])[1]
+        elif token[0] == "blank":
+            block = None
+        else:
+            line = token[1]
+            if line.startswith("```"):
+                fenced = not fenced
+            if block is None:
+                block = {"start": index, "lines": 0, "plain": True}
+                piece["blocks"].append(block)
+            block["lines"] += max(1, math.ceil(text_units(line) / per_line))
+            if fenced or line.startswith("```") or SPECIAL.match(line):
+                block["plain"] = False  # lists, headings, quotes and panels are not one paragraph
+    pieces.append(piece)
+
+    def height(piece, first):
+        text_mm = sum(block["lines"] * LINE_MM + PARSKIP_MM for block in piece["blocks"])
+        if piece["image"]:  # text beside the image runs in a narrower column
+            width, image_mm = piece["image"]
+            narrowing = TEXT_WIDTH_MM / (TEXT_WIDTH_MM - width - GAP_MM)
+            beside = image_mm / narrowing
+            text_mm = max(image_mm, text_mm * narrowing) if text_mm <= beside else image_mm + text_mm - beside
+        return text_mm + (head_height(note, kind) if first else 8.0 if piece.get("marker") else 0.0)
+
+    heights = [height(piece, number == 0) for number, piece in enumerate(pieces)]
+    marks = {}
+    if sum(heights) + 4.0 * (len(pieces) - 1) <= KEEP_WHOLE_MM:
+        return True, marks  # the whole note stays on one page
+    for number, piece in enumerate(pieces):
+        if number:
+            marks.setdefault(("close", piece["start"]), []).append("\\keepoff")
+        if heights[number] <= KEEP_WHOLE_MM:
+            if number:
+                marks.setdefault(("open", piece["start"]), []).append("\\keepon")
+            continue
+        # A long piece: its last TAIL_LINES lines never part.
+        blocks, rest = piece["blocks"], 0
+        for position in range(len(blocks) - 1, -1, -1):
+            block = blocks[position]
+            if rest + block["lines"] < TAIL_LINES and position:
+                rest += block["lines"]
+                continue
+            wanted = TAIL_LINES - rest  # how many of this block's closing lines must come along
+            if block["plain"] and block["lines"] > wanted + 1:
+                penalties = " ".join(["10000"] * (wanted - 1) + ["0"])
+                marks.setdefault(("open", block["start"]), []).append(
+                    f"\\widowpenalties={wanted} {penalties}\\relax")
+                if position + 1 < len(blocks):
+                    marks.setdefault(("open", blocks[position + 1]["start"]), []).append("\\nobreak\\keepon")
+            elif position or number:
+                marks.setdefault(("open", block["start"]), []).append("\\keepon")
+            break
+    return heights[0] <= KEEP_WHOLE_MM, marks
+
+
+def layout(note, kind, image_size):
+    """Estimate heights to choose how the image sits and how much room the entry needs."""
+    head_mm = head_height(note, kind)
     if note["name"] in OUTLINE_NOTES:
         return {"mode": "columns", "need": head_mm + 60}
     if not image_size:
@@ -311,12 +421,15 @@ def prepare_image(source, target):
 
 
 def entry_markdown(note, kind, root, workdir, images):
+    def place(source):  # a note printed twice shares one copy of each image
+        if source not in images:
+            target = workdir / f"image-{len(images) + 1:03d}.jpg"
+            images[source] = (target, prepare_image(root / source, target))
+        return images[source]
+
     image_size, image_path = None, None
     if note["image"]:
-        if note["image"] not in images:  # a note printed twice shares one copy of its image
-            target = workdir / f"image-{len(images) + 1:03d}.jpg"
-            images[note["image"]] = (target, prepare_image(root / note["image"], target))
-        image_path, image_size = images[note["image"]]
+        image_path, image_size = place(note["image"])
     plan = layout(note, kind, image_size)
     attributes = [f'kind="{kind}"', f'date="{note["date"]}"', f'need="{plan["need"]:.0f}"']
     if "mode" in plan:
@@ -328,7 +441,7 @@ def entry_markdown(note, kind, root, workdir, images):
         out += [f'## {note["title"]}', ""]
     if note["deck"]:
         out += ["::: deck", note["deck"], ":::", ""]
-    out += body_markdown(note)
+    out += body_markdown(note, place)
     out += ["", ":::::::", ""]
     return out
 

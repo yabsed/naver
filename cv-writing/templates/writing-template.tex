@@ -37,10 +37,13 @@
 \fancyfoot[L]{{\sffamily\fontsize{8.5}{10}\selectfont\color{muted}$author$}}
 \fancyfoot[R]{{\sffamily\fontsize{8.5}{10}\selectfont\color{muted}\thepage\,/\,\pageref*{LastPage}}}
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{5pt}
+% The gap between paragraphs may close by up to 1pt, so a page can take in the last line or two
+% of a piece instead of carrying them over to the next page.
+\setlength{\parskip}{5pt minus 1pt}
 \setlength{\columnsep}{6mm}   % gap between a lead image and the text beside it
 \setlength{\intextsep}{0pt}
 \setlength{\multicolsep}{2pt}
+\AddToHook{env/multicols/begin}{\setlength{\parskip}{5pt}}  % columns are cut to an exact height: no shrink there
 \raggedcolumns
 \setlist[itemize]{leftmargin=11pt,labelsep=6pt,itemsep=2pt,topsep=4pt,parsep=0pt,partopsep=0pt,label=\raisebox{0.3pt}{\tiny\textbullet}}
 \setlist[enumerate]{leftmargin=15pt,labelsep=5pt,itemsep=2pt,topsep=4pt,parsep=0pt,partopsep=0pt}
@@ -126,6 +129,8 @@
     \vskip\dimexpr\baselineskip*\numexpr\c@WF@wrappedlines-1\relax\relax
   \fi
   \WFclear}
+% Before a part that opens with its own image: end any earlier wrap, then keep rule, image and text together.
+\newcommand{\reserve}[1]{\entryfinish\keeplines{#1}}
 \makeatother
 
 \begin{document}
